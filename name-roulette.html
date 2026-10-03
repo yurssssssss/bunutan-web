@@ -1,0 +1,571 @@
+<title>Name Roulette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one narrow centered column, one step on screen at a time (name → spin → result); organizer tools tucked below. */
+:root {
+  --bg: #fafaf8;
+  --surface: #ffffff;
+  --fg: #1c1f22;
+  --muted: #6b7178;
+  --line: #e4e5e2;
+  --accent: #1f6feb;
+  --accent-fg: #ffffff;
+  --seg-a: #e8f0fd;
+  --seg-b: #ffffff;
+  --seg-c: #fff4c2;
+  --warn: #b42318;
+  --overlay: rgba(20, 22, 26, .6);
+  --note-bg: #fff1a8;
+  --note-fg: #3d2f00;
+  --note-line: #e8c83a;
+  --font: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --surface: #1d2024; --fg: #eef0f2; --muted: #9aa1a8; --line: #30343a;
+    --accent: #5a9bff; --accent-fg: #0d1117; --seg-a: #23324a; --seg-b: #1d2024; --seg-c: #4a4320; --warn: #ff8a80;
+    --overlay: rgba(0, 0, 0, .7); --note-bg: #3f3510; --note-fg: #ffe98a; --note-line: #8a7420;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --surface: #1d2024; --fg: #eef0f2; --muted: #9aa1a8; --line: #30343a;
+  --accent: #5a9bff; --accent-fg: #0d1117; --seg-a: #23324a; --seg-b: #1d2024; --seg-c: #4a4320; --warn: #ff8a80;
+    --overlay: rgba(0, 0, 0, .7); --note-bg: #3f3510; --note-fg: #ffe98a; --note-line: #8a7420;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 18px; line-height: 1.5; }
+
+.wrap { max-width: 520px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 56px; display: flex; flex-direction: column; gap: 28px; }
+h1 { font-size: 2rem; margin: 0; text-align: center; text-wrap: balance; }
+h2 { font-size: 1.3rem; margin: 0; text-align: center; text-wrap: balance; }
+p { margin: 0; }
+.center { text-align: center; }
+.muted { color: var(--muted); }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+
+input[type="text"], textarea {
+  width: 100%; font: inherit; color: var(--fg); background: var(--surface);
+  border: 2px solid var(--line); border-radius: 12px; padding: 14px 16px; box-sizing: border-box;
+}
+input[type="text"]:focus, textarea:focus { border-color: var(--accent); outline: none; }
+#nameInput { font-size: 1.3rem; text-align: center; }
+
+button { font: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.primary {
+  background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 999px;
+  padding: 16px 28px; font-weight: 700; font-size: 1.25rem; width: 100%;
+}
+.primary:disabled { opacity: .4; cursor: not-allowed; }
+.secondary {
+  background: transparent; color: var(--fg); border: 2px solid var(--line); border-radius: 999px;
+  padding: 12px 22px; font-weight: 700; width: 100%;
+}
+.link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 4px 0; font-size: 1rem; }
+.link:hover { color: var(--fg); }
+.msg { text-align: center; color: var(--warn); min-height: 1.5em; }
+
+.wheel-box { position: relative; width: min(100%, 400px); aspect-ratio: 1; max-width: 100%; align-self: center; }
+.wheel-box canvas { width: 100%; height: 100%; display: block; }
+.pointer {
+  position: absolute; left: 50%; top: -4px; transform: translateX(-50%); z-index: 1;
+  border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 24px solid var(--fg);
+}
+
+.overlay {
+  position: fixed; inset: 0; z-index: 10; background: var(--overlay);
+  display: grid; place-items: center;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+}
+.popup {
+  width: 100%; max-width: 440px; box-sizing: border-box;
+  background: var(--surface); border-radius: 20px; padding: 32px 24px 24px;
+  text-align: center; display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  animation: popIn .35s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes popIn { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.popup .small { color: var(--muted); font-size: 1.2rem; }
+.popup .big { font-size: 2.8rem; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; margin-top: -8px; }
+.popup .muted { font-size: 1rem; }
+.remember {
+  background: var(--note-bg); color: var(--note-fg); border: 2px solid var(--note-line);
+  border-radius: 12px; padding: 14px 16px;
+  font-size: 1.3rem; font-weight: 700; line-height: 1.35; letter-spacing: .03em; text-wrap: balance;
+}
+@media (prefers-reduced-motion: reduce) { .popup { animation: none; } }
+
+/* organizer */
+.org { border-top: 1px solid var(--line); padding-top: 20px; display: flex; flex-direction: column; gap: 16px; }
+.org h3 { margin: 0; font-size: 1.1rem; }
+.org #orgMsg { color: var(--fg); text-align: left; min-height: 0; }
+.org #addPreview { font-size: .95rem; overflow-wrap: anywhere; }
+.org #addInput { resize: vertical; }
+.org .row { display: flex; gap: 10px; }
+.org .row input { flex: 1; min-width: 0; padding: 10px 12px; }
+.small-btn {
+  background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 10px; padding: 10px 18px; font-weight: 700;
+}
+.small-btn.ghost { background: transparent; color: var(--fg); border: 2px solid var(--line); }
+.small-btn.danger { background: var(--warn); color: var(--surface); }
+ul.plist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+ul.plist li {
+  display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto auto; gap: 10px; align-items: center;
+  padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 1rem;
+}
+.pnum { font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.pname { overflow-wrap: anywhere; }
+.tag { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.remove { background: none; border: 0; color: var(--muted); font-size: .9rem; padding: 4px 6px; border-radius: 6px; }
+.remove:hover { color: var(--fg); background: var(--line); }
+.results { overflow-x: auto; }
+.results table { width: 100%; border-collapse: collapse; font-size: 1rem; }
+.results th, .results td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+.results th { color: var(--muted); font-weight: 400; font-size: .85rem; }
+.confirm { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+</style>
+
+<div class="wrap">
+  <h1>Name Roulette</h1>
+
+  <!-- Step: loading / unavailable -->
+  <section class="stack" id="stLoading">
+    <p class="center muted" id="loadingText">Loading…</p>
+  </section>
+
+  <!-- Step 1: name -->
+  <section class="stack" id="stName" hidden>
+    <h2>What is your name?</h2>
+    <form class="stack" id="nameForm" autocomplete="off">
+      <input id="nameInput" type="text" placeholder="Type your name" aria-label="Your name" maxlength="60">
+      <button class="primary" type="submit">Next</button>
+    </form>
+    <p class="msg" id="nameMsg" aria-live="polite"></p>
+  </section>
+
+  <!-- Step 2: spin -->
+  <section class="stack" id="stSpin" hidden>
+    <h2 id="hello"></h2>
+    <p class="center muted">Press Spin. The name behind your number will be shown.</p>
+    <div class="wheel-box">
+      <div class="pointer" aria-hidden="true"></div>
+      <canvas id="wheel" aria-label="Wheel of numbers"></canvas>
+    </div>
+    <button class="primary" type="button" id="spinBtn">Spin</button>
+    <p class="msg" id="spinMsg" aria-live="polite"></p>
+    <button class="link" type="button" id="notMe">That's not me</button>
+  </section>
+
+
+  <!-- Organizer (owner only) -->
+  <section class="org" id="org" hidden>
+    <button class="link" type="button" id="orgToggle">Organizer tools</button>
+    <div class="stack" id="orgBody" hidden>
+      <h3>Names in the roulette</h3>
+      <form class="stack" id="addForm" autocomplete="off">
+        <textarea id="addInput" rows="5" placeholder="Type or paste names here.&#10;One per line, or separated by commas." aria-label="Names to add"></textarea>
+        <p class="muted" id="addPreview" aria-live="polite"></p>
+        <button class="small-btn" type="submit">Add names</button>
+      </form>
+      <p class="msg" id="orgMsg" aria-live="polite"></p>
+      <ul class="plist" id="plist"></ul>
+
+      <h3>Results</h3>
+      <button class="small-btn ghost" type="button" id="resultsToggle">Show who got whom</button>
+      <div class="results" id="results" hidden></div>
+
+      <div class="confirm" id="resetBox">
+        <button class="small-btn ghost" type="button" id="resetBtn">Start over</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Result popup -->
+<div class="overlay" id="resultPopup" role="dialog" aria-modal="true" aria-labelledby="resBig" hidden>
+  <div class="popup">
+    <div class="small" id="resSmall"></div>
+    <div class="big" id="resBig"></div>
+    <p class="remember">PAKI TANDAAN OR SCREENSHOT PARA DI MALIMUTAN</p>
+    <p class="muted" id="resNote">Your result is saved.</p>
+    <button class="primary" type="button" id="doneBtn">Done</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const tok = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const norm = s => s.trim().replace(/\s+/g, " ").toLowerCase();
+  const newId = () => "p" + Math.random().toString(36).slice(2, 10);
+
+  const S = {
+    db: null, uid: null, owner: false,
+    participants: [],            // [{id, name}] — number = position + 1
+    taken: new Set(), spun: new Set(), picks: [],
+    me: null, wheel: [], rotation: 0, spinning: false, loaded: false,
+  };
+  const numOf = id => S.participants.findIndex(p => p.id === id) + 1;
+
+  function show(step) {
+    ["stLoading", "stName", "stSpin"].forEach(s => $(s).hidden = s !== step);
+    if (step === "stSpin") requestAnimationFrame(draw);
+  }
+  function openResult() {
+    $("resultPopup").hidden = false;
+    $("doneBtn").focus();
+  }
+
+  // ---------- wheel ----------
+  const canvas = $("wheel"), ctx = canvas.getContext("2d");
+
+  function available() {
+    return S.participants
+      .map((p, i) => ({ id: p.id, num: i + 1 }))
+      .filter(p => !S.taken.has(p.id) && (!S.me || p.id !== S.me.id));
+  }
+
+  function draw() {
+    const size = Math.round(canvas.parentElement.getBoundingClientRect().width);
+    if (!size) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== size * dpr) { canvas.width = size * dpr; canvas.height = size * dpr; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+    const c = size / 2, R = c - 4, list = S.wheel, n = list.length;
+    const seg = (Math.PI * 2) / Math.max(n, 1);
+
+    ctx.save(); ctx.translate(c, c); ctx.rotate(S.rotation);
+    if (!n) { ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fillStyle = tok("--surface"); ctx.fill(); }
+    list.forEach((p, i) => {
+      const a0 = -Math.PI / 2 + i * seg;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, a0, a0 + seg); ctx.closePath();
+      // alternate two tints; with an odd count the last slice gets a third so neighbours never match
+      ctx.fillStyle = (n % 2 === 1 && i === n - 1 && n > 1) ? tok("--seg-c") : i % 2 === 0 ? tok("--seg-a") : tok("--seg-b");
+      ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = tok("--line"); ctx.stroke();
+      ctx.save();
+      ctx.rotate(a0 + seg / 2); ctx.translate(R * 0.72, 0); ctx.rotate(Math.PI / 2);
+      const fs = Math.max(14, Math.min(40, R * seg * 0.5, R * 0.16));
+      ctx.font = `700 ${fs}px "Atkinson Hyperlegible", system-ui, sans-serif`;
+      ctx.fillStyle = tok("--fg"); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(String(p.num), 0, 0);
+      ctx.restore();
+    });
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(c, c, R, 0, Math.PI * 2); ctx.lineWidth = 3; ctx.strokeStyle = tok("--fg"); ctx.stroke();
+    ctx.beginPath(); ctx.arc(c, c, R * 0.08, 0, Math.PI * 2); ctx.fillStyle = tok("--fg"); ctx.fill();
+  }
+
+  function refreshWheel() {
+    if (S.spinning) return;
+    S.wheel = available();
+    $("spinBtn").disabled = !S.wheel.length;
+    if (S.me && !$("stSpin").hidden && !S.wheel.length) $("spinMsg").textContent = "There are no names left to pick.";
+    draw();
+  }
+
+  function animateTo(index, n) {
+    return new Promise(resolve => {
+      const tau = Math.PI * 2, seg = tau / n;
+      const want = index * seg + (0.2 + Math.random() * 0.6) * seg;
+      let delta = (((-S.rotation % tau) + tau) % tau) - want; if (delta < 0) delta += tau;
+      const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const start = S.rotation, end = start + (reduce ? 1 : 5) * tau + delta;
+      const dur = reduce ? 800 : 4500, t0 = performance.now();
+      (function frame(now) {
+        const t = Math.min(1, (now - t0) / dur);
+        S.rotation = start + (end - start) * (1 - Math.pow(1 - t, 4));
+        draw();
+        t < 1 ? requestAnimationFrame(frame) : resolve();
+      })(t0);
+    });
+  }
+
+  // ---------- player flow ----------
+  $("nameForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const raw = $("nameInput").value.trim().replace(/\s+/g, " ").slice(0, 60);
+    const typed = norm(raw);
+    $("nameMsg").textContent = "";
+    if (!typed) { $("nameMsg").textContent = "Please type your name."; return; }
+    if (!S.participants.length) { $("nameMsg").textContent = "The organizer hasn't added the names yet. Please check back soon."; return; }
+    const me = findMe(typed) || { id: nameKey(typed), name: raw };
+    if (S.spun.has(me.id)) { await showAlreadySpun(me); return; }
+    S.me = me;
+    $("hello").textContent = "Hi, " + me.name + "!";
+    $("spinMsg").textContent = "";
+    S.rotation = 0;
+    show("stSpin");
+    refreshWheel();
+  });
+
+  // Any typed name is accepted. If it matches someone on the list (full name, or a first name only one
+  // person has), that person's own number is left off their wheel; otherwise they spin with every number.
+  function findMe(typed) {
+    const exact = S.participants.find(p => norm(p.name) === typed);
+    if (exact) return exact;
+    const first = typed.split(" ")[0];
+    const byFirst = S.participants.filter(p => norm(p.name).split(" ")[0] === first);
+    return byFirst.length === 1 ? byFirst[0] : null;
+  }
+  // a short stable key for a name that isn't on the list, so the same name can't spin twice
+  function nameKey(typed) {
+    let h = 0x811c9dc5;
+    for (const ch of typed) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
+    return "n" + h.toString(36);
+  }
+
+  async function showAlreadySpun(me) {
+    // On someone's own phone, show their saved result again. The organizer's device may be shared, so it doesn't.
+    let pick = null;
+    if (!S.owner && S.uid) {
+      try {
+        const snap = await S.db.doc("draws/" + S.uid).get();
+        pick = snap.exists ? (snap.data().picks || {})[me.id] : null;
+      } catch (e) {}
+    }
+    if (pick) {
+      $("resSmall").textContent = me.name + ", you already spun. You got number " + pick.toNum;
+      $("resBig").textContent = pick.toName;
+      $("resNote").textContent = "Each person can spin only once.";
+      openResult();
+    } else {
+      $("nameMsg").textContent = me.name + ", you already spun. Each person can spin only once.";
+    }
+  }
+
+  $("notMe").addEventListener("click", () => { if (S.spinning) return; resetPlayer(); });
+  $("doneBtn").addEventListener("click", resetPlayer);
+  function resetPlayer() {
+    $("resultPopup").hidden = true;
+    S.me = null; $("nameInput").value = ""; $("nameMsg").textContent = ""; $("resNote").textContent = "Your result is saved.";
+    show("stName"); $("nameInput").focus();
+  }
+
+  const holder = newId();
+  async function claim(path) {
+    // set-if-absent: hold a short lease, check, then write
+    const ref = S.db.doc(path);
+    const lease = await ref.acquire({ holder, ttlMs: 10000 });
+    if (!lease.acquired) return false;
+    const snap = await ref.get();
+    if (snap.exists && snap.data().claimed) return false;
+    await ref.set({ claimed: true, at: new Date().toISOString() });
+    return true;
+  }
+
+  $("spinBtn").addEventListener("click", async () => {
+    if (S.spinning || !S.me) return;
+    const me = S.me;
+    S.spinning = true; $("spinBtn").disabled = true; $("spinMsg").textContent = ""; $("notMe").hidden = true;
+    const list = available();
+    S.wheel = list;
+    try {
+      // 1. make sure this person hasn't spun (on another device)
+      const spunRef = S.db.doc("spun/" + me.id);
+      const lease = await spunRef.acquire({ holder, ttlMs: 30000 });
+      const spunSnap = await spunRef.get();
+      if (!lease.acquired || (spunSnap.exists && spunSnap.data().claimed)) {
+        throw { friendly: me.name + ", you already spun. Each person can spin only once." };
+      }
+      // 2. claim a random name nobody has yet
+      const order = list.map((_, i) => i).sort(() => Math.random() - 0.5);
+      let hit = -1;
+      for (const i of order) { if (await claim("taken/" + list[i].id)) { hit = i; break; } }
+      if (hit < 0) throw { friendly: "There are no names left to pick." };
+      // 3. record it
+      await spunRef.set({ claimed: true, at: new Date().toISOString() });
+      const target = S.participants.find(p => p.id === list[hit].id);
+      const pick = { fromId: me.id, fromName: me.name, fromNum: numOf(me.id) || null, toId: target.id, toName: target.name, toNum: list[hit].num, at: new Date().toISOString() };
+      const mine = S.db.doc("draws/" + S.uid);
+      const cur = await mine.get();
+      if (cur.exists) await mine.update({ picks: { [me.id]: pick } });
+      else await mine.set({ picks: { [me.id]: pick } });
+      // 4. spin to it and reveal
+      await animateTo(hit, list.length);
+      $("resSmall").textContent = "Number " + pick.toNum;
+      $("resBig").textContent = pick.toName;
+      openResult();
+    } catch (err) {
+      $("spinMsg").textContent = err && err.friendly ? err.friendly
+        : err && err.code === "invalid_argument" ? "You can't spin from this account. Ask the organizer to share the page with you as a Contributor."
+        : "Something went wrong. Please try again.";
+    } finally {
+      S.spinning = false; $("notMe").hidden = false;
+      refreshWheel();
+    }
+  });
+
+  // ---------- organizer ----------
+  let writeChain = Promise.resolve();
+  function saveParticipants(list) {
+    writeChain = writeChain.then(() => S.db.doc("config/participants").set({ list }))
+      .catch(() => { $("orgMsg").textContent = "Could not save the names. Please try again."; });
+    return writeChain;
+  }
+
+  $("orgToggle").addEventListener("click", () => {
+    const b = $("orgBody"); b.hidden = !b.hidden;
+    $("orgToggle").textContent = b.hidden ? "Organizer tools" : "Hide organizer tools";
+  });
+
+  // Split a pasted list into names: new lines, commas, semicolons and tabs separate names;
+  // list markers like "1.", "2)", "-", "•" at the start are dropped; repeats within the paste are removed.
+  function splitNames(text) {
+    const seen = new Set();
+    return text.split(/[\r\n\t,;]+/)
+      .map(s => s.replace(/^\s*(\d+\s*[.):\-]|[-•*·–])\s*/, "").trim().replace(/\s+/g, " ").slice(0, 60))
+      .filter(s => s && !/^\d+$/.test(s) && !seen.has(norm(s)) && seen.add(norm(s)));
+  }
+
+  $("addInput").addEventListener("input", () => {
+    const n = splitNames($("addInput").value);
+    $("addPreview").textContent = n.length > 1 ? n.length + " names found: " + n.join(", ") : "";
+  });
+
+  $("addForm").addEventListener("submit", e => {
+    e.preventDefault();
+    $("orgMsg").textContent = "";
+    const names = splitNames($("addInput").value);
+    if (!names.length) return;
+    const list = S.participants.slice();
+    const dupes = [];
+    names.forEach(n => {
+      if (list.some(p => norm(p.name) === norm(n))) dupes.push(n);
+      else list.push({ id: newId(), name: n.slice(0, 60) });
+    });
+    const added = names.length - dupes.length;
+    $("orgMsg").textContent = (added ? "Added " + added + (added === 1 ? " name." : " names.") : "")
+      + (dupes.length ? " Already on the list: " + dupes.join(", ") : "");
+    $("addInput").value = ""; $("addPreview").textContent = "";
+    S.participants = list; renderOrg(); refreshWheel();
+    saveParticipants(list);
+  });
+
+  function renderOrg() {
+    const ul = $("plist"); ul.innerHTML = "";
+    if (!S.participants.length) {
+      const li = document.createElement("li"); li.style.display = "block"; li.className = "muted";
+      li.textContent = "No names yet. Add everyone who will join.";
+      ul.appendChild(li);
+    }
+    S.participants.forEach((p, i) => {
+      const li = document.createElement("li");
+      const num = document.createElement("span"); num.className = "pnum"; num.textContent = i + 1;
+      const nm = document.createElement("span"); nm.className = "pname"; nm.textContent = p.name;
+      const tag = document.createElement("span"); tag.className = "tag";
+      tag.textContent = [S.spun.has(p.id) ? "spun" : "", S.taken.has(p.id) ? "picked" : ""].filter(Boolean).join(" · ");
+      const rm = document.createElement("button"); rm.className = "remove"; rm.type = "button"; rm.textContent = "Remove";
+      rm.setAttribute("aria-label", "Remove " + p.name);
+      rm.addEventListener("click", () => {
+        S.participants = S.participants.filter(x => x.id !== p.id);
+        renderOrg(); refreshWheel(); saveParticipants(S.participants);
+      });
+      li.append(num, nm, tag, rm); ul.appendChild(li);
+    });
+    renderResults();
+  }
+
+  function renderResults() {
+    const box = $("results"); box.innerHTML = "";
+    if (!S.picks.length) { const p = document.createElement("p"); p.className = "muted"; p.textContent = "Nobody has spun yet."; box.appendChild(p); return; }
+    const t = document.createElement("table");
+    t.innerHTML = "<thead><tr><th>Who spun</th><th>Got</th></tr></thead>";
+    const tb = document.createElement("tbody");
+    S.picks.forEach(k => {
+      const tr = document.createElement("tr");
+      const a = document.createElement("td"); a.textContent = k.fromName;
+      const b = document.createElement("td"); b.textContent = "No. " + k.toNum + " · " + k.toName;
+      tr.append(a, b); tb.appendChild(tr);
+    });
+    t.appendChild(tb); box.appendChild(t);
+  }
+
+  $("resultsToggle").addEventListener("click", () => {
+    const r = $("results"); r.hidden = !r.hidden;
+    $("resultsToggle").textContent = r.hidden ? "Show who got whom" : "Hide results";
+  });
+
+  function askReset() {
+    const box = $("resetBox"); box.innerHTML = "";
+    const q = document.createElement("span"); q.textContent = "Erase every spin and result? The names stay.";
+    const yes = document.createElement("button"); yes.className = "small-btn danger"; yes.type = "button"; yes.textContent = "Yes, start over";
+    const no = document.createElement("button"); no.className = "small-btn ghost"; no.type = "button"; no.textContent = "Cancel";
+    no.addEventListener("click", restoreReset);
+    yes.addEventListener("click", async () => {
+      yes.disabled = true; no.disabled = true;
+      try {
+        for (const col of ["taken", "spun", "draws"]) {
+          const snap = await S.db.collection(col).get();
+          for (const d of snap.docs) await S.db.doc(col + "/" + d.id).delete();
+        }
+        $("orgMsg").textContent = "Started over. Everyone can spin again.";
+      } catch (e) { $("orgMsg").textContent = "Could not erase everything. Please try again."; }
+      restoreReset();
+    });
+    box.append(q, yes, no);
+  }
+  function restoreReset() {
+    const box = $("resetBox"); box.innerHTML = "";
+    const b = document.createElement("button"); b.className = "small-btn ghost"; b.type = "button"; b.textContent = "Start over";
+    b.addEventListener("click", askReset); box.appendChild(b);
+  }
+  $("resetBtn").addEventListener("click", askReset);
+
+  // ---------- start ----------
+  new ResizeObserver(draw).observe(canvas.parentElement);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if (document.fonts) document.fonts.ready.then(draw);
+
+  (async () => {
+    const db = window.claude ? await window.claude.use("db") : null;
+    const user = window.claude ? await window.claude.use("user") : null;
+    if (!db) { $("loadingText").textContent = "Please sign in to claude.ai to join the roulette."; return; }
+    S.db = db;
+    S.uid = user ? await user.id() : null;
+    S.owner = user ? await user.isOwner() : false;
+    if (!S.uid) { $("loadingText").textContent = "Please sign in to claude.ai to join the roulette."; return; }
+
+    const onErr = () => { $("loadingText").textContent = "The roulette could not load. Please refresh the page."; show("stLoading"); };
+
+    db.doc("config/participants").onSnapshot(snap => {
+      S.participants = snap.exists && Array.isArray(snap.data().list) ? snap.data().list : [];
+      if (!S.loaded) {
+        S.loaded = true;
+        if (S.participants.length || !S.owner) show("stName");
+        if (!S.participants.length && !S.owner) { $("nameMsg").textContent = "The organizer hasn't added the names yet. Please check back soon."; }
+      }
+      if (S.owner) {
+        $("org").hidden = false;
+        if (!S.participants.length) { $("orgBody").hidden = false; $("orgToggle").textContent = "Hide organizer tools"; show("stName"); }
+        renderOrg();
+      }
+      refreshWheel();
+    }, onErr);
+
+    db.collection("taken").onSnapshot(snap => {
+      S.taken = new Set(snap.docs.filter(d => d.data().claimed).map(d => d.id));
+      refreshWheel(); if (S.owner) renderOrg();
+    }, onErr);
+
+    db.collection("spun").onSnapshot(snap => {
+      S.spun = new Set(snap.docs.filter(d => d.data().claimed).map(d => d.id));
+      if (S.owner) renderOrg();
+    }, onErr);
+
+    if (S.owner) {
+      db.collection("draws").onSnapshot(snap => {
+        S.picks = snap.docs.flatMap(d => Object.values(d.data().picks || {}))
+          .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+        renderResults();
+      }, onErr);
+    }
+  })();
+})();
+</script>
