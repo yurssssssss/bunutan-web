@@ -27,7 +27,10 @@ class RouletteTest extends TestCase
             ->assertSee('Ano ang pangalan mo?')
             ->assertSee('PAKI TANDAAN OR SCREENSHOT PARA DI MALIMUTAN')
             ->assertDontSee('Para sa organizer')
-            ->assertDontSee(route('organizer.login'));
+            ->assertDontSee(route('organizer.login'))
+            // versioned so phones load the new script after a deploy instead of a cached old one
+            ->assertSee('js/roulette.js?v=', false)
+            ->assertSee('css/roulette.css?v=', false);
     }
 
     public function test_player_page_lists_the_names(): void
@@ -89,6 +92,23 @@ class RouletteTest extends TestCase
         $this->assertSame(1, $res->json('number'));
         $this->assertSame([1], $res->json('numbers'));
         $this->assertSame(1, Draw::first()->picked_number);
+    }
+
+    public function test_last_person_to_spin_is_never_left_with_only_their_own_name(): void
+    {
+        $this->seedNames();
+        [$juan, $maria, $pedro] = Participant::where('group', 'matanda')->orderBy('id')->get()->all();
+        Draw::create([
+            'spinner_name' => $juan->name, 'group' => 'matanda', 'spinner_key' => 'p:'.$juan->id,
+            'spinner_participant_id' => $juan->id,
+            'picked_participant_id' => $maria->id, 'picked_name' => $maria->name, 'picked_number' => 1,
+        ]);
+
+        // Maria could draw Juan or Pedro; drawing Juan would leave Pedro with only himself
+        $this->postJson('/spin', ['name' => 'Maria', 'group' => 'matanda'])
+            ->assertOk()->assertJson(['name' => 'Pedro']);
+        $this->postJson('/spin', ['name' => 'Pedro', 'group' => 'matanda'])
+            ->assertOk()->assertJson(['name' => 'Juan Dela Cruz']);
     }
 
     public function test_never_draws_self_and_each_name_only_once(): void

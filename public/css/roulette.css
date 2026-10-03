@@ -63,6 +63,13 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px soli
   padding: 16px 28px; font-weight: 700; font-size: 1.25rem; width: 100%;
 }
 .primary:disabled { opacity: .4; cursor: not-allowed; }
+.secondary {
+  background: var(--surface); color: var(--fg); border: 2px solid var(--line); border-radius: 999px;
+  padding: 14px 18px; font-weight: 700; font-size: 1.1rem;
+}
+.secondary:hover:not(:disabled) { border-color: var(--accent); }
+.secondary:disabled { opacity: .4; cursor: default; }
+.btn-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 10px; }
 .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 4px 0; font-size: 1rem; }
 .link:hover { color: var(--fg); }
 a.link { display: inline-block; }

@@ -119,6 +119,24 @@ class Roulette
             ->values();
     }
 
+    /**
+     * Pick a random name, except when only one other person in the group still
+     * has to spin and their name is on this wheel: then pick them. Otherwise
+     * that last person could be left with only their own name.
+     */
+    public function choose(Participant $me, Collection $available, Collection $groupParticipants): Participant
+    {
+        $spunIds = Draw::whereNotNull('spinner_participant_id')->pluck('spinner_participant_id')->all();
+        $stillToSpin = $groupParticipants->reject(fn ($p) => $p->id === $me->id || in_array($p->id, $spunIds));
+        $last = $stillToSpin->count() === 1 ? $stillToSpin->first() : null;
+
+        if ($last && $available->contains('id', $last->id)) {
+            return $last;
+        }
+
+        return $available->random();
+    }
+
     public function hasSpun(string $key): bool
     {
         return Draw::where('spinner_key', $key)->exists();
@@ -186,12 +204,13 @@ class Roulette
                     throw new RuntimeException($this->alreadySpunMessage($me->name));
                 }
 
-                $available = $this->availableFor($me, $all->where('group', $group)->values());
+                $groupParticipants = $all->where('group', $group)->values();
+                $available = $this->availableFor($me, $groupParticipants);
                 if ($available->isEmpty()) {
                     throw new RuntimeException('Wala nang natitirang pangalan na mabubunot.');
                 }
 
-                $pick = $available->random();
+                $pick = $this->choose($me, $available, $groupParticipants);
                 $slice = random_int(1, $available->count());
                 Draw::create([
                     'spinner_name' => $me->name,

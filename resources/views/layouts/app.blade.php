@@ -8,7 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-    <link rel="stylesheet" href="{{ asset('css/roulette.css') }}">
+    {{-- ?v= changes whenever the file does, so phones don't keep an old copy after a deploy --}}
+    <link rel="stylesheet" href="{{ asset('css/roulette.css') }}?v={{ filemtime(public_path('css/roulette.css')) }}">
 </head>
 <body>
     @yield('content')

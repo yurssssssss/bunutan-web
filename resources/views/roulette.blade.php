@@ -27,7 +27,10 @@
         <h2 id="askName">Ano ang pangalan mo?</h2>
         <form class="stack" id="nameForm" autocomplete="off">
             <input id="nameInput" type="text" placeholder="I-type ang pangalan mo" aria-label="Pangalan mo" maxlength="60">
-            <button class="primary" type="submit" id="nameBtn">Susunod</button>
+            <div class="btn-row">
+                <button class="secondary" type="button" id="clearBtn" disabled>Burahin</button>
+                <button class="primary" type="submit" id="nameBtn">Susunod</button>
+            </div>
         </form>
         <p class="msg" id="nameMsg" aria-live="polite"></p>
 
@@ -86,5 +89,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/roulette.js') }}"></script>
+<script src="{{ asset('js/roulette.js') }}?v={{ filemtime(public_path('js/roulette.js')) }}"></script>
 @endpush

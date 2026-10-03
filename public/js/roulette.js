@@ -106,6 +106,7 @@
   // 2. pangalan: typing filters the list (6 names per page); tapping a name copies its spelling
   function filterList() {
     const q = norm($("nameInput").value), box = groupBox(S.group);
+    $("clearBtn").disabled = !$("nameInput").value;
     if (!box) return;
     const all = groupPicks(S.group);
     const hits = all.filter(b => !q || norm(b.dataset.name).includes(q));
@@ -124,6 +125,11 @@
     }
   }
   $("nameInput").addEventListener("input", () => { $("nameMsg").textContent = ""; S.page = 0; filterList(); });
+  // Burahin: empty the name box and show the whole list again
+  $("clearBtn").addEventListener("click", () => {
+    $("nameInput").value = ""; $("nameMsg").textContent = ""; S.page = 0; filterList();
+    $("nameInput").focus();
+  });
   document.querySelectorAll(".pager-btn").forEach(b => b.addEventListener("click", () => {
     S.page += Number(b.dataset.step); filterList();
   }));
