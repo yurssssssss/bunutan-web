@@ -81,8 +81,8 @@
       const want = index * seg + (0.2 + Math.random() * 0.6) * seg;   // land inside the slice, not on a line
       let delta = (((-S.rotation % tau) + tau) % tau) - want; if (delta < 0) delta += tau;
       const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const start = S.rotation, end = start + (reduce ? 1 : 5) * tau + delta;
-      const dur = reduce ? 800 : 4500, t0 = performance.now();
+      const start = S.rotation, end = start + (reduce ? 1 : 6) * tau + delta;
+      const dur = reduce ? 800 : 5500, t0 = performance.now();
       (function frame(now) {
         const t = Math.min(1, (now - t0) / dur);
         S.rotation = start + (end - start) * (1 - Math.pow(1 - t, 4));
