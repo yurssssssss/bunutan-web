@@ -148,11 +148,6 @@
     filterList();
     $("nameInput").scrollIntoView({ block: "center", behavior: "smooth" });
   }));
-  // tapping anywhere on the row does the same as its button
-  document.querySelectorAll(".name-row").forEach(row => row.addEventListener("click", e => {
-    if (!e.target.closest(".name-pick")) row.querySelector(".name-pick").click();
-  }));
-
   $("nameForm").addEventListener("submit", async e => {
     e.preventDefault();
     const typed = $("nameInput").value.trim().replace(/\s+/g, " ");

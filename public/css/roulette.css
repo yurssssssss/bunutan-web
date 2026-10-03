@@ -97,7 +97,7 @@ a.link { display: inline-block; }
   display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 8px;
 }
 .name-row {
-  display: flex; align-items: center; gap: 10px; min-width: 0; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; min-width: 0;
   padding: 6px 6px 6px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
 }
 .name-text { flex: 1; min-width: 0; font-size: 1rem; overflow-wrap: anywhere; }
