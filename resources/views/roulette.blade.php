@@ -48,6 +48,11 @@
                                 </li>
                             @endforeach
                         </ul>
+                        <nav class="pager" aria-label="Mga pahina ng listahan" hidden>
+                            <button type="button" class="pager-btn" data-step="-1">‹ Nakaraan</button>
+                            <span class="pager-info" aria-live="polite"></span>
+                            <button type="button" class="pager-btn" data-step="1">Kasunod ›</button>
+                        </nav>
                     @endif
                     <p class="center muted no-match" hidden>Walang tugmang pangalan sa listahan.</p>
                 </div>

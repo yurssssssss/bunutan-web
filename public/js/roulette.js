@@ -8,7 +8,9 @@
   const groupPicks = g => [...groupBox(g).querySelectorAll(".name-pick")];
   const groupLabel = g => document.querySelector('.choice[data-group="' + g + '"]').textContent;
 
-  const S = { step: "group", name: "", group: "", wheel: [], rotation: 0, spinning: false };
+  const PAGE_SIZE = 6;
+
+  const S = { step: "group", name: "", group: "", page: 0, wheel: [], rotation: 0, spinning: false };
 
   async function post(url, body) {
     let res;
@@ -108,22 +110,34 @@
     document.querySelectorAll(".namelist-group").forEach(g => g.hidden = g.dataset.group !== S.group);
     $("askName").textContent = "Ano ang pangalan mo? (" + groupLabel(S.group) + ")";
     $("nameInput").value = ""; $("nameMsg").textContent = "";
-    filterList();
+    S.page = 0; filterList();
     show("name");
   }));
 
-  // 2. pangalan: typing filters the list; tapping a name copies its spelling
+  // 2. pangalan: typing filters the list (6 names per page); tapping a name copies its spelling
   function filterList() {
     const q = norm($("nameInput").value), box = groupBox(S.group);
     if (!box) return;
-    let shown = 0;
-    groupPicks(S.group).forEach(b => {
-      const hit = !q || norm(b.dataset.name).includes(q);
-      b.parentElement.hidden = !hit; if (hit) shown++;
-    });
-    box.querySelector(".no-match").hidden = !groupPicks(S.group).length || shown > 0;
+    const all = groupPicks(S.group);
+    const hits = all.filter(b => !q || norm(b.dataset.name).includes(q));
+    const pages = Math.max(1, Math.ceil(hits.length / PAGE_SIZE));
+    S.page = Math.min(Math.max(S.page, 0), pages - 1);
+    const onPage = new Set(hits.slice(S.page * PAGE_SIZE, (S.page + 1) * PAGE_SIZE));
+    all.forEach(b => b.closest(".name-row").hidden = !onPage.has(b));
+    box.querySelector(".no-match").hidden = !all.length || hits.length > 0;
+
+    const pager = box.querySelector(".pager");
+    if (pager) {
+      pager.hidden = pages <= 1;
+      pager.querySelector(".pager-info").textContent = "Pahina " + (S.page + 1) + " ng " + pages;
+      pager.querySelector('[data-step="-1"]').disabled = S.page === 0;
+      pager.querySelector('[data-step="1"]').disabled = S.page >= pages - 1;
+    }
   }
-  $("nameInput").addEventListener("input", () => { $("nameMsg").textContent = ""; filterList(); });
+  $("nameInput").addEventListener("input", () => { $("nameMsg").textContent = ""; S.page = 0; filterList(); });
+  document.querySelectorAll(".pager-btn").forEach(b => b.addEventListener("click", () => {
+    S.page += Number(b.dataset.step); filterList();
+  }));
   // Kopyahin: fills the name box (and the clipboard, where the browser allows it)
   document.querySelectorAll(".name-pick").forEach(b => b.addEventListener("click", () => {
     $("nameInput").value = b.dataset.name; $("nameMsg").textContent = "";
