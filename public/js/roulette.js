@@ -124,10 +124,19 @@
     box.querySelector(".no-match").hidden = !groupPicks(S.group).length || shown > 0;
   }
   $("nameInput").addEventListener("input", () => { $("nameMsg").textContent = ""; filterList(); });
+  // Kopyahin: fills the name box (and the clipboard, where the browser allows it)
   document.querySelectorAll(".name-pick").forEach(b => b.addEventListener("click", () => {
     $("nameInput").value = b.dataset.name; $("nameMsg").textContent = "";
+    try { navigator.clipboard && navigator.clipboard.writeText(b.dataset.name).catch(() => {}); } catch (e) {}
+    document.querySelectorAll(".name-pick.copied").forEach(o => { o.classList.remove("copied"); o.textContent = "Kopyahin"; });
+    b.classList.add("copied"); b.textContent = "Nakopya ✓";
+    setTimeout(() => { b.classList.remove("copied"); b.textContent = "Kopyahin"; }, 2000);
     filterList();
     $("nameInput").scrollIntoView({ block: "center", behavior: "smooth" });
+  }));
+  // tapping anywhere on the row does the same as its button
+  document.querySelectorAll(".name-row").forEach(row => row.addEventListener("click", e => {
+    if (!e.target.closest(".name-pick")) row.querySelector(".name-pick").click();
   }));
 
   $("nameForm").addEventListener("submit", async e => {

@@ -33,7 +33,7 @@
 
         {{-- Listahan: pindutin ang pangalan para makopya ang tamang spelling --}}
         <div class="namelist">
-            <p class="center muted">Hanapin ang pangalan mo sa listahan at pindutin ito para makopya ang tamang spelling.</p>
+            <p class="center muted">Hanapin ang pangalan mo sa listahan at pindutin ang <strong>Kopyahin</strong> para makopya ang tamang spelling.</p>
             @foreach ($groups as $group)
                 <div class="namelist-group" data-group="{{ $group['key'] }}" hidden>
                     <h3>Listahan ng {{ $group['label'] }}</h3>
@@ -42,7 +42,10 @@
                     @else
                         <ul>
                             @foreach ($group['names'] as $name)
-                                <li><button type="button" class="name-pick" data-name="{{ $name }}">{{ $name }}</button></li>
+                                <li class="name-row">
+                                    <span class="name-text">{{ $name }}</span>
+                                    <button type="button" class="name-pick" data-name="{{ $name }}" aria-label="Kopyahin ang {{ $name }}">Kopyahin</button>
+                                </li>
                             @endforeach
                         </ul>
                     @endif
