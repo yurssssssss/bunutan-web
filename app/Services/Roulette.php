@@ -62,9 +62,11 @@ class Roulette
     }
 
     /**
-     * Find the participant a typed name refers to: the full name, or a first
-     * name that only one person on the list has. Null when nothing matches;
-     * that person can still spin.
+     * Find the participant a typed name refers to: the full name, or a shorter
+     * or longer form of it that fits only one person on the list ("Juan" or
+     * "Juan Dela" for "Juan Dela Cruz", "Maria Clara" for "Maria"). Names that
+     * only share a first name ("John Doe" and "John Smith") don't match.
+     * Null when nothing matches; that person can still spin.
      */
     public function match(string $typed, Collection $participants): ?Participant
     {
@@ -73,10 +75,23 @@ class Roulette
         if ($exact) {
             return $exact;
         }
-        $first = explode(' ', $typed)[0];
-        $byFirst = $participants->filter(fn ($p) => explode(' ', $this->normalize($p->name))[0] === $first);
+        $typedWords = explode(' ', $typed);
+        $partial = $participants->filter(fn ($p) => $this->startsWithWords($typedWords, explode(' ', $this->normalize($p->name))));
 
-        return $byFirst->count() === 1 ? $byFirst->first() : null;
+        return $partial->count() === 1 ? $partial->first() : null;
+    }
+
+    /**
+     * Whether the shorter word list is the start of the longer one.
+     *
+     * @param  list<string>  $a
+     * @param  list<string>  $b
+     */
+    private function startsWithWords(array $a, array $b): bool
+    {
+        [$short, $long] = count($a) <= count($b) ? [$a, $b] : [$b, $a];
+
+        return $short === array_slice($long, 0, count($short));
     }
 
     public function spinnerKey(string $typed, ?Participant $me): string

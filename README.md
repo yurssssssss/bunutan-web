@@ -9,7 +9,7 @@ A name roulette for a family gathering. Each person types their name, picks **Ma
 - Each name can be drawn only once.
 - Each person can spin only once.
 
-Any typed name is accepted. If it matches someone on the list (the full name, or a first name only one person has), that person's own number is left off their wheel.
+Any typed name is accepted. If it matches someone on the list, that person's own number is left off their wheel. A match is the full name, or a shorter or longer form of it that fits only one person ("Juan" or "Juan Dela" for "Juan Dela Cruz"). Names that only share a first name ("Juan Santos" and "Juan Dela Cruz") are treated as different people.
 
 ## Run it
 

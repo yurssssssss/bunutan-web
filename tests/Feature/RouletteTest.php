@@ -39,6 +39,30 @@ class RouletteTest extends TestCase
             ->assertOk()->assertJson(['numbers' => [2, 3]]);
     }
 
+    public function test_shorter_or_longer_form_of_a_listed_name_matches(): void
+    {
+        $this->seedNames();
+
+        $this->postJson('/check', ['name' => 'Juan Dela', 'group' => 'matanda'])
+            ->assertOk()->assertJson(['numbers' => [2, 3]]);
+        // "Maria" is number 2 in Matanda
+        $this->postJson('/check', ['name' => 'Maria Clara', 'group' => 'matanda'])
+            ->assertOk()->assertJson(['numbers' => [1, 3]]);
+    }
+
+    public function test_same_first_name_but_different_person_does_not_match(): void
+    {
+        $this->seedNames();
+
+        // "Juan Santos" is not "Juan Dela Cruz": every number stays on the wheel
+        $this->postJson('/check', ['name' => 'Juan Santos', 'group' => 'matanda'])
+            ->assertOk()->assertJson(['numbers' => [1, 2, 3]]);
+
+        // and Juan Santos spinning doesn't use up Juan Dela Cruz's turn
+        $this->postJson('/spin', ['name' => 'Juan Santos', 'group' => 'matanda'])->assertOk();
+        $this->postJson('/check', ['name' => 'Juan Dela Cruz', 'group' => 'matanda'])->assertOk();
+    }
+
     public function test_group_must_be_chosen(): void
     {
         $this->seedNames();
