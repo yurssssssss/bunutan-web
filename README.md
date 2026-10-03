@@ -1,15 +1,16 @@
 # Bunutan
 
-A name roulette for a family gathering. Each person types their name, picks **Matanda** or **Bata**, and spins. The wheel shows only numbers. When it stops, the name behind that number pops up, and the result is saved.
+A name roulette for a family gathering. Each person picks **Matanda** or **Bata**, chooses their name from that group's list, and spins. The wheel shows numbers. When it stops, the name behind that number pops up, and the result is saved.
 
 ## Rules
 
 - Matanda only draws Matanda names; Bata only draws Bata names.
-- Only names on the list can spin, and you can't draw your own name.
+- Only names on the list can spin, and only in the group the organizer put them in.
+- You can't draw your own name.
 - Each name can be drawn only once.
 - Each person can spin only once.
 
-The list of names is shown on the first screen. Players copy their name from it (tap a name to fill it in, or type to filter the list). Only names on the list can spin, and the spelling must match; capital letters and extra spaces don't matter. Under the wheel is the numbered list of names still on it. The pick itself is random and made by the server.
+After picking Matanda or Bata, players see only that group's list. They copy their name from it (tap a name to fill it in, or type to filter the list). The spelling must match; capital letters and extra spaces don't matter. Under the wheel is the numbered list of names still on it. The pick itself is random and made by the server.
 
 ## Run it
 

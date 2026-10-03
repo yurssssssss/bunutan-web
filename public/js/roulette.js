@@ -4,9 +4,11 @@
   const urls = { check: app.dataset.checkUrl, spin: app.dataset.spinUrl };
   const tok = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
   const norm = s => s.trim().replace(/\s+/g, " ").toLowerCase();
-  const picks = [...document.querySelectorAll(".name-pick")];
+  const groupBox = g => document.querySelector('.namelist-group[data-group="' + g + '"]');
+  const groupPicks = g => [...groupBox(g).querySelectorAll(".name-pick")];
+  const groupLabel = g => document.querySelector('.choice[data-group="' + g + '"]').textContent;
 
-  const S = { name: "", group: "", wheel: [], rotation: 0, spinning: false };
+  const S = { step: "group", name: "", group: "", wheel: [], rotation: 0, spinning: false };
 
   async function post(url, body) {
     let res;
@@ -28,10 +30,11 @@
   }
 
   function show(step) {
-    $("stName").hidden = step !== "name";
+    S.step = step;
     $("stGroup").hidden = step !== "group";
+    $("stName").hidden = step !== "name";
     $("stSpin").hidden = step !== "spin";
-    $("backBtn").hidden = step === "name";
+    $("backBtn").hidden = step === "group";
     if (step === "spin") requestAnimationFrame(draw);
   }
 
@@ -99,64 +102,67 @@
   }
 
   // ---------- daloy ----------
-  // 1. pangalan: typing filters the list; tapping a name copies its spelling
+  // 1. Matanda o Bata: only that group's list is shown on the next step
+  document.querySelectorAll(".choice").forEach(btn => btn.addEventListener("click", () => {
+    S.group = btn.dataset.group;
+    document.querySelectorAll(".namelist-group").forEach(g => g.hidden = g.dataset.group !== S.group);
+    $("askName").textContent = "Ano ang pangalan mo? (" + groupLabel(S.group) + ")";
+    $("nameInput").value = ""; $("nameMsg").textContent = "";
+    filterList();
+    show("name");
+  }));
+
+  // 2. pangalan: typing filters the list; tapping a name copies its spelling
   function filterList() {
-    const q = norm($("nameInput").value);
+    const q = norm($("nameInput").value), box = groupBox(S.group);
+    if (!box) return;
     let shown = 0;
-    picks.forEach(b => {
+    groupPicks(S.group).forEach(b => {
       const hit = !q || norm(b.dataset.name).includes(q);
       b.parentElement.hidden = !hit; if (hit) shown++;
     });
-    document.querySelectorAll(".namelist-group").forEach(g => {
-      const items = g.querySelectorAll("li");
-      g.hidden = items.length > 0 && [...items].every(li => li.hidden);
-    });
-    $("noMatch").hidden = !picks.length || shown > 0;
+    box.querySelector(".no-match").hidden = !groupPicks(S.group).length || shown > 0;
   }
   $("nameInput").addEventListener("input", () => { $("nameMsg").textContent = ""; filterList(); });
-  picks.forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".name-pick").forEach(b => b.addEventListener("click", () => {
     $("nameInput").value = b.dataset.name; $("nameMsg").textContent = "";
     filterList();
     $("nameInput").scrollIntoView({ block: "center", behavior: "smooth" });
   }));
 
-  $("nameForm").addEventListener("submit", e => {
+  $("nameForm").addEventListener("submit", async e => {
     e.preventDefault();
     const typed = $("nameInput").value.trim().replace(/\s+/g, " ");
     $("nameMsg").textContent = "";
     if (!typed) { $("nameMsg").textContent = "Pakisulat ang pangalan mo."; return; }
-    const listed = picks.find(b => norm(b.dataset.name) === norm(typed));
-    if (!listed) {
-      $("nameMsg").textContent = "Wala sa listahan ang \"" + typed + "\". Pindutin ang pangalan mo sa listahan sa ibaba para makopya ang tamang spelling.";
+    const listed = groupPicks(S.group).find(b => norm(b.dataset.name) === norm(typed));
+    const elsewhere = [...document.querySelectorAll(".name-pick")].find(b => norm(b.dataset.name) === norm(typed));
+    if (!listed && elsewhere) {
+      const other = groupLabel(elsewhere.closest(".namelist-group").dataset.group);
+      $("nameMsg").textContent = "Nasa listahan ng " + other + " ang \"" + elsewhere.dataset.name + "\". Bumalik at piliin ang " + other + ".";
       return;
     }
-    S.name = listed.dataset.name;
-    $("askGroup").textContent = S.name + ", ikaw ba ay Matanda o Bata?";
-    $("groupMsg").textContent = "";
-    show("group");
-  });
-
-  // 2. Matanda o Bata
-  document.querySelectorAll(".choice").forEach(btn => btn.addEventListener("click", async () => {
-    const buttons = document.querySelectorAll(".choice");
-    buttons.forEach(b => b.disabled = true);
-    $("groupMsg").textContent = "";
+    if (!listed) {
+      $("nameMsg").textContent = "Wala sa listahan ng " + groupLabel(S.group) + " ang \"" + typed + "\". Pindutin ang pangalan mo sa listahan sa ibaba para makopya ang tamang spelling.";
+      return;
+    }
+    $("nameBtn").disabled = true;
     try {
-      const data = await post(urls.check, { name: S.name, group: btn.dataset.group });
-      S.group = btn.dataset.group; S.name = data.name; S.wheel = data.numbers; S.rotation = 0;
+      const data = await post(urls.check, { name: listed.dataset.name, group: S.group });
+      S.name = data.name; S.wheel = data.numbers; S.rotation = 0;
       renderWheelList(data.entries);
-      $("hello").textContent = "Kumusta, " + data.name + "! (" + btn.textContent + ")";
+      $("hello").textContent = "Kumusta, " + data.name + "! (" + groupLabel(S.group) + ")";
       $("spinMsg").textContent = "";
       $("spinBtn").disabled = false;
       show("spin");
     } catch (err) {
-      $("groupMsg").textContent = err.message;
+      $("nameMsg").textContent = err.message;
     } finally {
-      buttons.forEach(b => b.disabled = false);
+      $("nameBtn").disabled = false;
     }
-  }));
+  });
 
-  // 3. ikot
+  // 3. ikot (the pick is random, made by the server)
   $("spinBtn").addEventListener("click", async () => {
     if (S.spinning || !S.name || !S.group) return;
     S.spinning = true; $("spinBtn").disabled = true; $("backBtn").hidden = true; $("spinMsg").textContent = "";
@@ -177,14 +183,21 @@
     }
   });
 
+  // start over for the next person
   function reset() {
     $("resultPopup").hidden = true;
     S.name = ""; S.group = ""; S.wheel = [];
-    $("nameInput").value = ""; $("nameMsg").textContent = ""; filterList();
-    show("name"); $("nameInput").focus();
+    $("nameInput").value = ""; $("nameMsg").textContent = "";
+    show("group");
   }
   $("doneBtn").addEventListener("click", reset);
-  document.querySelectorAll("[data-back]").forEach(b => b.addEventListener("click", () => { if (!S.spinning) reset(); }));
+
+  // Bumalik: one step back (spin → name → Matanda o Bata)
+  $("backBtn").addEventListener("click", () => {
+    if (S.spinning) return;
+    if (S.step === "spin") { $("nameMsg").textContent = ""; show("name"); }
+    else reset();
+  });
 
   new ResizeObserver(draw).observe(canvas.parentElement);
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);

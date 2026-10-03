@@ -35,7 +35,7 @@ class RouletteTest extends TestCase
         $this->seedNames();
 
         $this->get('/')->assertOk()
-            ->assertSeeInOrder(['Matanda', 'Juan Dela Cruz', 'Maria', 'Pedro', 'Bata', 'Bea', 'Carlo']);
+            ->assertSeeInOrder(['Ikaw ba ay Matanda o Bata?', 'Listahan ng Matanda', 'Juan Dela Cruz', 'Maria', 'Pedro', 'Listahan ng Bata', 'Bea', 'Carlo']);
     }
 
     public function test_check_leaves_own_number_off_the_wheel(): void
@@ -57,7 +57,7 @@ class RouletteTest extends TestCase
 
         foreach (['Juan', 'Juan Santos', 'Tito Boy'] as $name) {
             $this->postJson('/check', ['name' => $name, 'group' => 'matanda'])
-                ->assertStatus(409)->assertJson(['message' => 'Wala sa listahan ang "'.$name.'". Kopyahin ang eksaktong spelling ng pangalan mo mula sa listahan.']);
+                ->assertStatus(409)->assertJson(['message' => 'Wala sa listahan ng Matanda ang "'.$name.'". Kopyahin ang eksaktong spelling ng pangalan mo mula sa listahan.']);
             $this->postJson('/spin', ['name' => $name, 'group' => 'matanda'])->assertStatus(409);
         }
         $this->assertSame(0, Draw::count());
@@ -91,11 +91,23 @@ class RouletteTest extends TestCase
         $this->assertSame(3, Draw::count());
     }
 
-    public function test_each_person_spins_only_once_even_in_the_other_group(): void
+    public function test_name_must_be_in_the_chosen_group(): void
+    {
+        $this->seedNames();
+
+        // Maria is on the Matanda list, so she can't spin as Bata
+        foreach (['/check', '/spin'] as $url) {
+            $this->postJson($url, ['name' => 'maria', 'group' => 'bata'])
+                ->assertStatus(409)->assertJson(['message' => 'Nasa listahan ng Matanda ang "Maria". Bumalik at piliin ang Matanda.']);
+        }
+        $this->assertSame(0, Draw::count());
+    }
+
+    public function test_each_person_spins_only_once(): void
     {
         $this->seedNames();
         $this->postJson('/spin', ['name' => 'Maria', 'group' => 'matanda'])->assertOk();
-        $this->postJson('/spin', ['name' => 'maria', 'group' => 'bata'])
+        $this->postJson('/spin', ['name' => 'maria', 'group' => 'matanda'])
             ->assertStatus(409)->assertJson(['message' => 'Maria, nakapag-ikot ka na. Isang beses lang puwedeng mag-ikot ang bawat isa.']);
     }
 

@@ -73,15 +73,24 @@ class Roulette
     }
 
     /**
-     * The participant a typed name refers to, or a message telling the player
-     * to copy their name from the list.
+     * The participant a typed name refers to within the chosen group, or a
+     * message telling the player to copy their name from that group's list.
      *
      * @throws RuntimeException
      */
-    public function findOnList(string $typed, Collection $participants): Participant
+    public function findOnList(string $typed, string $group, Collection $participants): Participant
     {
-        return $this->match($typed, $participants)
-            ?? throw new RuntimeException('Wala sa listahan ang "'.$typed.'". Kopyahin ang eksaktong spelling ng pangalan mo mula sa listahan.');
+        $me = $this->match($typed, $participants);
+        $label = Participant::GROUPS[$group];
+
+        if (! $me) {
+            throw new RuntimeException('Wala sa listahan ng '.$label.' ang "'.$typed.'". Kopyahin ang eksaktong spelling ng pangalan mo mula sa listahan.');
+        }
+        if ($me->group !== $group) {
+            throw new RuntimeException('Nasa listahan ng '.Participant::GROUPS[$me->group].' ang "'.$me->name.'". Bumalik at piliin ang '.Participant::GROUPS[$me->group].'.');
+        }
+
+        return $me;
     }
 
     public function spinnerKey(Participant $me): string
@@ -136,8 +145,7 @@ class Roulette
             throw new RuntimeException('Wala pang pangalan para sa '.Participant::GROUPS[$group].'. Pakibalikan mamaya.');
         }
 
-        // match against the whole list, so the same person can't spin once in each group
-        $me = $this->findOnList($typed, $all);
+        $me = $this->findOnList($typed, $group, $all);
         if ($this->hasSpun($this->spinnerKey($me))) {
             throw new RuntimeException($this->alreadySpunMessage($me->name));
         }
@@ -170,7 +178,7 @@ class Roulette
                 // lock the list so two spins at the same moment run one after the other
                 Participant::orderBy('id')->lockForUpdate()->get();
                 $all = $this->participants();
-                $me = $this->findOnList($typed, $all);
+                $me = $this->findOnList($typed, $group, $all);
                 $key = $this->spinnerKey($me);
 
                 if ($this->hasSpun($key)) {
