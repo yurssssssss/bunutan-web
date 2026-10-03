@@ -92,17 +92,6 @@
     });
   }
 
-  // the numbered names under the wheel; same order and numbers as the slices
-  function renderWheelList(entries) {
-    const ol = $("wheelList"); ol.innerHTML = "";
-    entries.forEach(e => {
-      const li = document.createElement("li");
-      const num = document.createElement("span"); num.className = "pnum"; num.textContent = e.number;
-      const nm = document.createElement("span"); nm.textContent = e.name;
-      li.append(num, nm); ol.appendChild(li);
-    });
-  }
-
   // ---------- daloy ----------
   // 1. Matanda o Bata: only that group's list is shown on the next step
   document.querySelectorAll(".choice").forEach(btn => btn.addEventListener("click", () => {
@@ -168,7 +157,6 @@
     try {
       const data = await post(urls.check, { name: listed.dataset.name, group: S.group });
       S.name = data.name; S.wheel = data.numbers; S.rotation = 0;
-      renderWheelList(data.entries);
       $("hello").textContent = "Kumusta, " + data.name + "! (" + groupLabel(S.group) + ")";
       $("spinMsg").textContent = "";
       $("spinBtn").disabled = false;
@@ -187,7 +175,7 @@
     try {
       const result = await post(urls.spin, { name: S.name, group: S.group });
       // the server returns the wheel as it was at the moment of the spin
-      S.wheel = result.numbers; draw(); renderWheelList(result.entries);
+      S.wheel = result.numbers; draw();
       await animateTo(result.numbers.indexOf(result.number), result.numbers.length);
       $("resSmall").textContent = "Numero " + result.number;
       $("resBig").textContent = result.name;

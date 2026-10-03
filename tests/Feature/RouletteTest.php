@@ -42,13 +42,24 @@ class RouletteTest extends TestCase
     {
         $this->seedNames();
 
-        // capital letters and extra spaces don't matter; "Juan Dela Cruz" is number 1 in Matanda
+        // capital letters and extra spaces don't matter; Juan's wheel holds only Maria and Pedro
         $this->postJson('/check', ['name' => 'juan  dela cruz', 'group' => 'matanda'])
-            ->assertOk()->assertExactJson([
-                'name' => 'Juan Dela Cruz',
-                'numbers' => [2, 3],
-                'entries' => [['number' => 2, 'name' => 'Maria'], ['number' => 3, 'name' => 'Pedro']],
-            ]);
+            ->assertOk()->assertExactJson(['name' => 'Juan Dela Cruz', 'numbers' => [1, 2]]);
+    }
+
+    public function test_wheel_does_not_reveal_who_was_already_drawn(): void
+    {
+        $this->seedNames();
+        $maria = Participant::where('name', 'Maria')->first();
+        Draw::create([
+            'spinner_name' => 'Pedro', 'group' => 'matanda', 'spinner_key' => 'p:test',
+            'picked_participant_id' => $maria->id, 'picked_name' => 'Maria', 'picked_number' => 1,
+        ]);
+
+        // only Pedro is left for Juan: the wheel shows 1 (not Pedro's list number 3) and no names
+        $this->postJson('/check', ['name' => 'Juan Dela Cruz', 'group' => 'matanda'])
+            ->assertOk()->assertExactJson(['name' => 'Juan Dela Cruz', 'numbers' => [1]])
+            ->assertDontSee('Pedro');
     }
 
     public function test_name_must_be_spelled_as_on_the_list(): void
@@ -75,7 +86,9 @@ class RouletteTest extends TestCase
         $this->seedNames();
         $res = $this->postJson('/spin', ['name' => 'Bea', 'group' => 'bata'])->assertOk();
         $this->assertSame('Carlo', $res->json('name'));
-        $this->assertSame(2, $res->json('number'));
+        $this->assertSame(1, $res->json('number'));
+        $this->assertSame([1], $res->json('numbers'));
+        $this->assertSame(1, Draw::first()->picked_number);
     }
 
     public function test_never_draws_self_and_each_name_only_once(): void

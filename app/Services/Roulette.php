@@ -99,16 +99,17 @@ class Roulette
     }
 
     /**
-     * Number and name of each slice on a wheel, in wheel order.
+     * The wheel's slice numbers: always 1 to N with no gaps, so players can't
+     * tell which names have already been drawn.
      *
-     * @return list<array{number:int, name:string}>
+     * @return list<int>
      */
-    public function entries(Collection $available): array
+    public function slices(Collection $available): array
     {
-        return $available->map(fn ($p) => ['number' => $p->number, 'name' => $p->name])->values()->all();
+        return range(1, $available->count());
     }
 
-    /** Numbers still on a group's wheel for this person: not picked yet and not their own. */
+    /** Names still on a group's wheel for this person: not picked yet and not their own. */
     public function availableFor(Participant $me, Collection $groupParticipants): Collection
     {
         $picked = Draw::whereNotNull('picked_participant_id')->pluck('picked_participant_id')->all();
@@ -131,7 +132,7 @@ class Roulette
     /**
      * Check a typed name before showing the wheel.
      *
-     * @return array{name:string, numbers:list<int>, entries:list<array{number:int, name:string}>}
+     * @return array{name:string, numbers:list<int>}
      *
      * @throws RuntimeException with a message meant for the player
      */
@@ -157,15 +158,15 @@ class Roulette
 
         return [
             'name' => $me->name,
-            'numbers' => $available->pluck('number')->all(),
-            'entries' => $this->entries($available),
+            'numbers' => $this->slices($available),
         ];
     }
 
     /**
-     * Pick a random name from the group's wheel and save it.
+     * Pick a random name from the group's wheel and save it, together with the
+     * slice number the wheel lands on (the number the player sees).
      *
-     * @return array{number:int, name:string, numbers:list<int>, entries:list<array{number:int, name:string}>}
+     * @return array{number:int, name:string, numbers:list<int>}
      *
      * @throws RuntimeException with a message meant for the player
      */
@@ -191,6 +192,7 @@ class Roulette
                 }
 
                 $pick = $available->random();
+                $slice = random_int(1, $available->count());
                 Draw::create([
                     'spinner_name' => $me->name,
                     'group' => $group,
@@ -198,14 +200,13 @@ class Roulette
                     'spinner_participant_id' => $me->id,
                     'picked_participant_id' => $pick->id,
                     'picked_name' => $pick->name,
-                    'picked_number' => $pick->number,
+                    'picked_number' => $slice,
                 ]);
 
                 return [
-                    'number' => $pick->number,
+                    'number' => $slice,
                     'name' => $pick->name,
-                    'numbers' => $available->pluck('number')->all(),
-                    'entries' => $this->entries($available),
+                    'numbers' => $this->slices($available),
                 ];
             });
         } catch (UniqueConstraintViolationException) {

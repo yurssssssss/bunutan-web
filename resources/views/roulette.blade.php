@@ -70,11 +70,6 @@
         </div>
         <button class="primary" type="button" id="spinBtn">Paikutin</button>
         <p class="msg" id="spinMsg" aria-live="polite"></p>
-
-        <div class="wheel-list">
-            <h3>Mga nasa gulong</h3>
-            <ol id="wheelList"></ol>
-        </div>
     </section>
 </div>
 
