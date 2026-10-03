@@ -5,11 +5,11 @@ A name roulette for a family gathering. Each person types their name, picks **Ma
 ## Rules
 
 - Matanda only draws Matanda names; Bata only draws Bata names.
-- You can't draw your own name (when your typed name matches the list).
+- Only names on the list can spin, and you can't draw your own name.
 - Each name can be drawn only once.
 - Each person can spin only once.
 
-Any typed name is accepted. If it matches someone on the list, that person's own number is left off their wheel. A match is the full name, or a shorter or longer form of it that fits only one person ("Juan" or "Juan Dela" for "Juan Dela Cruz"). Names that only share a first name ("Juan Santos" and "Juan Dela Cruz") are treated as different people.
+The list of names is shown on the first screen. Players copy their name from it (tap a name to fill it in, or type to filter the list). Only names on the list can spin, and the spelling must match; capital letters and extra spaces don't matter. Under the wheel is the numbered list of names still on it. The pick itself is random and made by the server.
 
 ## Run it
 

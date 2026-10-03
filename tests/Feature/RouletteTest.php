@@ -30,37 +30,37 @@ class RouletteTest extends TestCase
             ->assertDontSee(route('organizer.login'));
     }
 
+    public function test_player_page_lists_the_names(): void
+    {
+        $this->seedNames();
+
+        $this->get('/')->assertOk()
+            ->assertSeeInOrder(['Matanda', 'Juan Dela Cruz', 'Maria', 'Pedro', 'Bata', 'Bea', 'Carlo']);
+    }
+
     public function test_check_leaves_own_number_off_the_wheel(): void
     {
         $this->seedNames();
 
-        // "juan" matches "Juan Dela Cruz" (number 1 in Matanda) by first name
-        $this->postJson('/check', ['name' => 'juan', 'group' => 'matanda'])
-            ->assertOk()->assertJson(['numbers' => [2, 3]]);
+        // capital letters and extra spaces don't matter; "Juan Dela Cruz" is number 1 in Matanda
+        $this->postJson('/check', ['name' => 'juan  dela cruz', 'group' => 'matanda'])
+            ->assertOk()->assertExactJson([
+                'name' => 'Juan Dela Cruz',
+                'numbers' => [2, 3],
+                'entries' => [['number' => 2, 'name' => 'Maria'], ['number' => 3, 'name' => 'Pedro']],
+            ]);
     }
 
-    public function test_shorter_or_longer_form_of_a_listed_name_matches(): void
+    public function test_name_must_be_spelled_as_on_the_list(): void
     {
         $this->seedNames();
 
-        $this->postJson('/check', ['name' => 'Juan Dela', 'group' => 'matanda'])
-            ->assertOk()->assertJson(['numbers' => [2, 3]]);
-        // "Maria" is number 2 in Matanda
-        $this->postJson('/check', ['name' => 'Maria Clara', 'group' => 'matanda'])
-            ->assertOk()->assertJson(['numbers' => [1, 3]]);
-    }
-
-    public function test_same_first_name_but_different_person_does_not_match(): void
-    {
-        $this->seedNames();
-
-        // "Juan Santos" is not "Juan Dela Cruz": every number stays on the wheel
-        $this->postJson('/check', ['name' => 'Juan Santos', 'group' => 'matanda'])
-            ->assertOk()->assertJson(['numbers' => [1, 2, 3]]);
-
-        // and Juan Santos spinning doesn't use up Juan Dela Cruz's turn
-        $this->postJson('/spin', ['name' => 'Juan Santos', 'group' => 'matanda'])->assertOk();
-        $this->postJson('/check', ['name' => 'Juan Dela Cruz', 'group' => 'matanda'])->assertOk();
+        foreach (['Juan', 'Juan Santos', 'Tito Boy'] as $name) {
+            $this->postJson('/check', ['name' => $name, 'group' => 'matanda'])
+                ->assertStatus(409)->assertJson(['message' => 'Wala sa listahan ang "'.$name.'". Kopyahin ang eksaktong spelling ng pangalan mo mula sa listahan.']);
+            $this->postJson('/spin', ['name' => $name, 'group' => 'matanda'])->assertStatus(409);
+        }
+        $this->assertSame(0, Draw::count());
     }
 
     public function test_group_must_be_chosen(): void
@@ -96,14 +96,7 @@ class RouletteTest extends TestCase
         $this->seedNames();
         $this->postJson('/spin', ['name' => 'Maria', 'group' => 'matanda'])->assertOk();
         $this->postJson('/spin', ['name' => 'maria', 'group' => 'bata'])
-            ->assertStatus(409)->assertJson(['message' => 'maria, nakapag-ikot ka na. Isang beses lang puwedeng mag-ikot ang bawat isa.']);
-    }
-
-    public function test_unlisted_name_can_spin_once(): void
-    {
-        $this->seedNames();
-        $this->postJson('/spin', ['name' => 'Tito Boy', 'group' => 'matanda'])->assertOk();
-        $this->postJson('/check', ['name' => 'tito  boy', 'group' => 'matanda'])->assertStatus(409);
+            ->assertStatus(409)->assertJson(['message' => 'Maria, nakapag-ikot ka na. Isang beses lang puwedeng mag-ikot ang bawat isa.']);
     }
 
     public function test_organizer_pages_need_the_password(): void

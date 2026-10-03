@@ -3,6 +3,8 @@
   const app = $("app");
   const urls = { check: app.dataset.checkUrl, spin: app.dataset.spinUrl };
   const tok = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const norm = s => s.trim().replace(/\s+/g, " ").toLowerCase();
+  const picks = [...document.querySelectorAll(".name-pick")];
 
   const S = { name: "", group: "", wheel: [], rotation: 0, spinning: false };
 
@@ -85,15 +87,51 @@
     });
   }
 
+  // the numbered names under the wheel; same order and numbers as the slices
+  function renderWheelList(entries) {
+    const ol = $("wheelList"); ol.innerHTML = "";
+    entries.forEach(e => {
+      const li = document.createElement("li");
+      const num = document.createElement("span"); num.className = "pnum"; num.textContent = e.number;
+      const nm = document.createElement("span"); nm.textContent = e.name;
+      li.append(num, nm); ol.appendChild(li);
+    });
+  }
+
   // ---------- daloy ----------
-  // 1. pangalan
+  // 1. pangalan: typing filters the list; tapping a name copies its spelling
+  function filterList() {
+    const q = norm($("nameInput").value);
+    let shown = 0;
+    picks.forEach(b => {
+      const hit = !q || norm(b.dataset.name).includes(q);
+      b.parentElement.hidden = !hit; if (hit) shown++;
+    });
+    document.querySelectorAll(".namelist-group").forEach(g => {
+      const items = g.querySelectorAll("li");
+      g.hidden = items.length > 0 && [...items].every(li => li.hidden);
+    });
+    $("noMatch").hidden = !picks.length || shown > 0;
+  }
+  $("nameInput").addEventListener("input", () => { $("nameMsg").textContent = ""; filterList(); });
+  picks.forEach(b => b.addEventListener("click", () => {
+    $("nameInput").value = b.dataset.name; $("nameMsg").textContent = "";
+    filterList();
+    $("nameInput").scrollIntoView({ block: "center", behavior: "smooth" });
+  }));
+
   $("nameForm").addEventListener("submit", e => {
     e.preventDefault();
     const typed = $("nameInput").value.trim().replace(/\s+/g, " ");
     $("nameMsg").textContent = "";
     if (!typed) { $("nameMsg").textContent = "Pakisulat ang pangalan mo."; return; }
-    S.name = typed;
-    $("askGroup").textContent = typed + ", ikaw ba ay Matanda o Bata?";
+    const listed = picks.find(b => norm(b.dataset.name) === norm(typed));
+    if (!listed) {
+      $("nameMsg").textContent = "Wala sa listahan ang \"" + typed + "\". Pindutin ang pangalan mo sa listahan sa ibaba para makopya ang tamang spelling.";
+      return;
+    }
+    S.name = listed.dataset.name;
+    $("askGroup").textContent = S.name + ", ikaw ba ay Matanda o Bata?";
     $("groupMsg").textContent = "";
     show("group");
   });
@@ -106,6 +144,7 @@
     try {
       const data = await post(urls.check, { name: S.name, group: btn.dataset.group });
       S.group = btn.dataset.group; S.name = data.name; S.wheel = data.numbers; S.rotation = 0;
+      renderWheelList(data.entries);
       $("hello").textContent = "Kumusta, " + data.name + "! (" + btn.textContent + ")";
       $("spinMsg").textContent = "";
       $("spinBtn").disabled = false;
@@ -124,7 +163,7 @@
     try {
       const result = await post(urls.spin, { name: S.name, group: S.group });
       // the server returns the wheel as it was at the moment of the spin
-      S.wheel = result.numbers; draw();
+      S.wheel = result.numbers; draw(); renderWheelList(result.entries);
       await animateTo(result.numbers.indexOf(result.number), result.numbers.length);
       $("resSmall").textContent = "Numero " + result.number;
       $("resBig").textContent = result.name;
@@ -141,7 +180,7 @@
   function reset() {
     $("resultPopup").hidden = true;
     S.name = ""; S.group = ""; S.wheel = [];
-    $("nameInput").value = ""; $("nameMsg").textContent = "";
+    $("nameInput").value = ""; $("nameMsg").textContent = ""; filterList();
     show("name"); $("nameInput").focus();
   }
   $("doneBtn").addEventListener("click", reset);

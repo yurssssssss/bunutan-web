@@ -62,50 +62,50 @@ class Roulette
     }
 
     /**
-     * Find the participant a typed name refers to: the full name, or a shorter
-     * or longer form of it that fits only one person on the list ("Juan" or
-     * "Juan Dela" for "Juan Dela Cruz", "Maria Clara" for "Maria"). Names that
-     * only share a first name ("John Doe" and "John Smith") don't match.
-     * Null when nothing matches; that person can still spin.
+     * Find the participant a typed name refers to. The spelling must match the
+     * list; only capital letters and extra spaces are ignored.
      */
     public function match(string $typed, Collection $participants): ?Participant
     {
         $typed = $this->normalize($typed);
-        $exact = $participants->first(fn ($p) => $this->normalize($p->name) === $typed);
-        if ($exact) {
-            return $exact;
-        }
-        $typedWords = explode(' ', $typed);
-        $partial = $participants->filter(fn ($p) => $this->startsWithWords($typedWords, explode(' ', $this->normalize($p->name))));
 
-        return $partial->count() === 1 ? $partial->first() : null;
+        return $participants->first(fn ($p) => $this->normalize($p->name) === $typed);
     }
 
     /**
-     * Whether the shorter word list is the start of the longer one.
+     * The participant a typed name refers to, or a message telling the player
+     * to copy their name from the list.
      *
-     * @param  list<string>  $a
-     * @param  list<string>  $b
+     * @throws RuntimeException
      */
-    private function startsWithWords(array $a, array $b): bool
+    public function findOnList(string $typed, Collection $participants): Participant
     {
-        [$short, $long] = count($a) <= count($b) ? [$a, $b] : [$b, $a];
-
-        return $short === array_slice($long, 0, count($short));
+        return $this->match($typed, $participants)
+            ?? throw new RuntimeException('Wala sa listahan ang "'.$typed.'". Kopyahin ang eksaktong spelling ng pangalan mo mula sa listahan.');
     }
 
-    public function spinnerKey(string $typed, ?Participant $me): string
+    public function spinnerKey(Participant $me): string
     {
-        return $me ? 'p:'.$me->id : 'n:'.mb_substr($this->normalize($typed), 0, 90);
+        return 'p:'.$me->id;
+    }
+
+    /**
+     * Number and name of each slice on a wheel, in wheel order.
+     *
+     * @return list<array{number:int, name:string}>
+     */
+    public function entries(Collection $available): array
+    {
+        return $available->map(fn ($p) => ['number' => $p->number, 'name' => $p->name])->values()->all();
     }
 
     /** Numbers still on a group's wheel for this person: not picked yet and not their own. */
-    public function availableFor(?Participant $me, Collection $groupParticipants): Collection
+    public function availableFor(Participant $me, Collection $groupParticipants): Collection
     {
         $picked = Draw::whereNotNull('picked_participant_id')->pluck('picked_participant_id')->all();
 
         return $groupParticipants
-            ->reject(fn ($p) => in_array($p->id, $picked) || ($me && $p->id === $me->id))
+            ->reject(fn ($p) => in_array($p->id, $picked) || $p->id === $me->id)
             ->values();
     }
 
@@ -122,7 +122,7 @@ class Roulette
     /**
      * Check a typed name before showing the wheel.
      *
-     * @return array{name:string, numbers:list<int>}
+     * @return array{name:string, numbers:list<int>, entries:list<array{number:int, name:string}>}
      *
      * @throws RuntimeException with a message meant for the player
      */
@@ -137,23 +137,27 @@ class Roulette
         }
 
         // match against the whole list, so the same person can't spin once in each group
-        $me = $this->match($typed, $all);
-        if ($this->hasSpun($this->spinnerKey($typed, $me))) {
-            throw new RuntimeException($this->alreadySpunMessage($typed));
+        $me = $this->findOnList($typed, $all);
+        if ($this->hasSpun($this->spinnerKey($me))) {
+            throw new RuntimeException($this->alreadySpunMessage($me->name));
         }
 
-        $numbers = $this->availableFor($me, $groupParticipants)->pluck('number')->all();
-        if (! $numbers) {
+        $available = $this->availableFor($me, $groupParticipants);
+        if ($available->isEmpty()) {
             throw new RuntimeException('Wala nang natitirang pangalan na mabubunot.');
         }
 
-        return ['name' => $typed, 'numbers' => $numbers];
+        return [
+            'name' => $me->name,
+            'numbers' => $available->pluck('number')->all(),
+            'entries' => $this->entries($available),
+        ];
     }
 
     /**
      * Pick a random name from the group's wheel and save it.
      *
-     * @return array{number:int, name:string, numbers:list<int>}
+     * @return array{number:int, name:string, numbers:list<int>, entries:list<array{number:int, name:string}>}
      *
      * @throws RuntimeException with a message meant for the player
      */
@@ -166,11 +170,11 @@ class Roulette
                 // lock the list so two spins at the same moment run one after the other
                 Participant::orderBy('id')->lockForUpdate()->get();
                 $all = $this->participants();
-                $me = $this->match($typed, $all);
-                $key = $this->spinnerKey($typed, $me);
+                $me = $this->findOnList($typed, $all);
+                $key = $this->spinnerKey($me);
 
                 if ($this->hasSpun($key)) {
-                    throw new RuntimeException($this->alreadySpunMessage($typed));
+                    throw new RuntimeException($this->alreadySpunMessage($me->name));
                 }
 
                 $available = $this->availableFor($me, $all->where('group', $group)->values());
@@ -180,10 +184,10 @@ class Roulette
 
                 $pick = $available->random();
                 Draw::create([
-                    'spinner_name' => $typed,
+                    'spinner_name' => $me->name,
                     'group' => $group,
                     'spinner_key' => $key,
-                    'spinner_participant_id' => $me?->id,
+                    'spinner_participant_id' => $me->id,
                     'picked_participant_id' => $pick->id,
                     'picked_name' => $pick->name,
                     'picked_number' => $pick->number,
@@ -193,6 +197,7 @@ class Roulette
                     'number' => $pick->number,
                     'name' => $pick->name,
                     'numbers' => $available->pluck('number')->all(),
+                    'entries' => $this->entries($available),
                 ];
             });
         } catch (UniqueConstraintViolationException) {

@@ -20,6 +20,26 @@
             <button class="primary" type="submit">Susunod</button>
         </form>
         <p class="msg" id="nameMsg" aria-live="polite"></p>
+
+        {{-- Listahan: pindutin ang pangalan para makopya ang tamang spelling --}}
+        <div class="namelist" id="nameList">
+            <p class="center muted">Hanapin ang pangalan mo sa listahan at pindutin ito para makopya ang tamang spelling.</p>
+            @foreach ($groups as $group)
+                <div class="namelist-group">
+                    <h3>{{ $group['label'] }}</h3>
+                    @if ($group['names']->isEmpty())
+                        <p class="muted">Wala pang pangalan.</p>
+                    @else
+                        <ul>
+                            @foreach ($group['names'] as $name)
+                                <li><button type="button" class="name-pick" data-name="{{ $name }}">{{ $name }}</button></li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+            @endforeach
+            <p class="center muted" id="noMatch" hidden>Walang tugmang pangalan sa listahan.</p>
+        </div>
     </section>
 
     {{-- Hakbang 2: Matanda o Bata --}}
@@ -42,6 +62,11 @@
         </div>
         <button class="primary" type="button" id="spinBtn">Paikutin</button>
         <p class="msg" id="spinMsg" aria-live="polite"></p>
+
+        <div class="wheel-list">
+            <h3>Mga nasa gulong</h3>
+            <ol id="wheelList"></ol>
+        </div>
     </section>
 </div>
 

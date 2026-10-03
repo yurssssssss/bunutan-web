@@ -14,10 +14,17 @@ class RouletteController extends Controller
 {
     public function __construct(private Roulette $roulette) {}
 
-    /** The player screen: name → Matanda or Bata → spin → result. */
+    /** The player screen: name (copied from the list) → Matanda or Bata → spin → result. */
     public function index(): View
     {
-        return view('roulette');
+        $all = $this->roulette->participants();
+
+        return view('roulette', [
+            'groups' => collect(Participant::GROUPS)->map(fn ($label, $key) => [
+                'label' => $label,
+                'names' => $all->where('group', $key)->pluck('name')->values(),
+            ])->values(),
+        ]);
     }
 
     /** Check the typed name and return the numbers on that person's wheel. */

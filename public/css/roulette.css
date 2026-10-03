@@ -88,6 +88,23 @@ a.link { display: inline-block; }
 .choice:hover:not(:disabled) { border-color: var(--accent); }
 .choice:disabled { opacity: .5; cursor: wait; }
 
+/* name list on the first step: tap a name to copy its spelling */
+.namelist { display: flex; flex-direction: column; gap: 18px; border-top: 1px solid var(--line); padding-top: 20px; }
+.namelist .muted { font-size: 1rem; }
+.namelist-group { display: flex; flex-direction: column; gap: 10px; }
+.namelist-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.name-pick {
+  min-height: 44px; padding: 8px 14px; border: 2px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--fg); font-size: 1rem; text-align: left; overflow-wrap: anywhere;
+}
+.name-pick:hover { border-color: var(--accent); }
+
+/* numbered list of names on the wheel */
+.wheel-list { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 20px; }
+.wheel-list ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 0 16px; }
+.wheel-list li { display: flex; gap: 10px; align-items: baseline; padding: 6px 2px; border-bottom: 1px solid var(--line); font-size: 1rem; overflow-wrap: anywhere; min-width: 0; }
+.wheel-list .pnum { min-width: 1.8rem; text-align: right; }
+
 /* wheel */
 /* on short phone screens the wheel shrinks so the Paikutin button stays in view */
 .wheel-box {
