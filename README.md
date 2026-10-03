@@ -10,7 +10,7 @@ A name roulette for a family gathering. Each person picks **Matanda** or **Bata*
 - Each name can be drawn only once.
 - Each person can spin only once.
 
-After picking Matanda or Bata, players see only that group's list. They copy their name from it (tap a name to fill it in, or type to filter the list). The spelling must match; capital letters and extra spaces don't matter. The wheel only shows numbers 1 to N, so players can't tell who has already been drawn. The pick itself is random and made by the server.
+After picking Matanda or Bata, players see only that group's list. They copy their name from it (the Kopyahin button next to a name fills it in; typing filters the list, 6 names per page). The spelling must match; capital letters and extra spaces don't matter. The wheel only shows numbers 1 to N, so players can't tell who has already been drawn. The pick itself is random and made by the server.
 
 ## Run it
 
