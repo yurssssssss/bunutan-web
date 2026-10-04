@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-    {{-- ?v= changes whenever the file does, so phones don't keep an old copy after a deploy --}}
-    <link rel="stylesheet" href="{{ asset('css/roulette.css') }}?v={{ filemtime(public_path('css/roulette.css')) }}">
+    {{-- ?v= is a fingerprint of the file's contents, so phones load the new copy after every change --}}
+    <link rel="stylesheet" href="{{ asset('css/roulette.css') }}?v={{ substr(md5_file(public_path('css/roulette.css')), 0, 10) }}">
 </head>
 <body>
     @yield('content')

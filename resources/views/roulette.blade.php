@@ -89,5 +89,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/roulette.js') }}?v={{ filemtime(public_path('js/roulette.js')) }}"></script>
+<script src="{{ asset('js/roulette.js') }}?v={{ substr(md5_file(public_path('js/roulette.js')), 0, 10) }}"></script>
 @endpush
