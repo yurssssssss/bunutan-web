@@ -1,32 +1,21 @@
-/* Layout: one narrow centered column, one step on screen at a time (name → spin → result popup). */
+/* Layout: one narrow centered column, one step on screen at a time (name → spin → result popup).
+   Always light (white page, dark text), even on phones set to dark mode, so it reads the same for everyone. */
 :root {
-  --bg: #fafaf8;
+  --bg: #f6f7f9;
   --surface: #ffffff;
-  --fg: #1c1f22;
-  --muted: #6b7178;
-  --line: #e4e5e2;
-  --accent: #1f6feb;
+  --fg: #111418;
+  --muted: #555c66;
+  --line: #d9dde3;
+  --accent: #1565c0;
   --accent-fg: #ffffff;
-  --seg-a: #e8f0fd;
-  --seg-b: #ffffff;
-  --seg-c: #fff4c2;
-  --warn: #b42318;
-  --ok: #1a7f37;
-  --overlay: rgba(20, 22, 26, .6);
-  --note-bg: #fff1a8;
+  --warn: #c62828;
+  --ok: #1b7a34;
+  --overlay: rgba(17, 20, 24, .6);
+  --note-bg: #fff3b0;
   --note-fg: #3d2f00;
-  --note-line: #e8c83a;
+  --note-line: #e0b400;
   --font: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #15171a; --surface: #1d2024; --fg: #eef0f2; --muted: #9aa1a8; --line: #30343a;
-    --accent: #5a9bff; --accent-fg: #0d1117; --seg-a: #23324a; --seg-b: #1d2024; --seg-c: #4a4320;
-    --warn: #ff8a80; --ok: #6fdc8c;
-    --overlay: rgba(0, 0, 0, .7); --note-bg: #3f3510; --note-fg: #ffe98a; --note-line: #8a7420;
-    color-scheme: dark;
-  }
 }
 
 *, *::before, *::after { box-sizing: border-box; }

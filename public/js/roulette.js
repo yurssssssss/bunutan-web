@@ -42,6 +42,20 @@
 
   // ---------- gulong ----------
   const canvas = $("wheel"), ctx = canvas.getContext("2d");
+  // classic prize-wheel colours, each with the text colour that reads best on it
+  const SLICES = [
+    { bg: "#d32f2f", fg: "#ffffff" }, // pula
+    { bg: "#fbc02d", fg: "#111418" }, // dilaw
+    { bg: "#2e7d32", fg: "#ffffff" }, // berde
+    { bg: "#1565c0", fg: "#ffffff" }, // asul
+    { bg: "#f57c00", fg: "#111418" }, // kahel
+    { bg: "#6a1b9a", fg: "#ffffff" }, // lila
+  ];
+  // the last slice touches the first, so never give them the same colour
+  function sliceColor(i, n) {
+    if (n > 1 && i === n - 1 && i % SLICES.length === 0) return SLICES[2];
+    return SLICES[i % SLICES.length];
+  }
 
   function draw() {
     const size = Math.round(canvas.parentElement.getBoundingClientRect().width);
@@ -56,17 +70,16 @@
     ctx.save(); ctx.translate(c, c); ctx.rotate(S.rotation);
     if (!n) { ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fillStyle = tok("--surface"); ctx.fill(); }
     list.forEach((num, i) => {
-      const a0 = -Math.PI / 2 + i * seg;
+      const a0 = -Math.PI / 2 + i * seg, color = sliceColor(i, n);
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, a0, a0 + seg); ctx.closePath();
-      // alternate two tints; with an odd count the last slice gets a third so neighbours never match
-      ctx.fillStyle = (n % 2 === 1 && i === n - 1 && n > 1) ? tok("--seg-c") : i % 2 === 0 ? tok("--seg-a") : tok("--seg-b");
-      ctx.fill();
-      ctx.lineWidth = 1.5; ctx.strokeStyle = tok("--line"); ctx.stroke();
+      ctx.fillStyle = color.bg; ctx.fill();
+      ctx.lineWidth = n > 30 ? 1 : 2; ctx.strokeStyle = "#ffffff"; ctx.stroke();
+      // numbers run along the slice towards the rim, so they stay big even with many slices
       ctx.save();
-      ctx.rotate(a0 + seg / 2); ctx.translate(R * 0.72, 0); ctx.rotate(Math.PI / 2);
-      const fs = Math.max(14, Math.min(40, R * seg * 0.5, R * 0.16));
+      ctx.rotate(a0 + seg / 2); ctx.translate(R * 0.8, 0);
+      const fs = Math.max(12, Math.min(R * 0.16, R * 0.8 * seg * 0.8));
       ctx.font = `700 ${fs}px "Atkinson Hyperlegible", system-ui, sans-serif`;
-      ctx.fillStyle = tok("--fg"); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = color.fg; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(String(num), 0, 0);
       ctx.restore();
     });
@@ -212,6 +225,5 @@
   });
 
   new ResizeObserver(draw).observe(canvas.parentElement);
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
   if (document.fonts) document.fonts.ready.then(draw);
 })();
