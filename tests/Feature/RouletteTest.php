@@ -169,6 +169,43 @@ class RouletteTest extends TestCase
         $this->assertSame(6, Participant::where('group', 'bata')->count());
     }
 
+    public function test_organizer_fixes_the_spelling_of_a_name(): void
+    {
+        $this->seedNames();
+        $maria = Participant::where('name', 'Maria')->first();
+        $this->postJson('/spin', ['name' => 'Pedro', 'group' => 'matanda'])->assertOk();
+        $this->postJson('/spin', ['name' => 'Maria', 'group' => 'matanda'])->assertOk();
+
+        $this->withSession(['roulette_organizer' => true])
+            ->patch('/admin/participants/'.$maria->id, ['name' => '  Maria   Clara '])
+            ->assertSessionHas('status', 'Napalitan ang "Maria" ng "Maria Clara".');
+
+        $this->assertSame('Maria Clara', $maria->fresh()->name);
+        // her saved result shows the new spelling too
+        $this->assertSame('Maria Clara', Draw::where('spinner_participant_id', $maria->id)->value('spinner_name'));
+        $this->postJson('/check', ['name' => 'Maria Clara', 'group' => 'matanda'])->assertStatus(409);
+    }
+
+    public function test_organizer_cannot_rename_to_a_name_already_on_the_list(): void
+    {
+        $this->seedNames();
+        $pedro = Participant::where('name', 'Pedro')->first();
+
+        $this->withSession(['roulette_organizer' => true])
+            ->patch('/admin/participants/'.$pedro->id, ['name' => 'maria'])
+            ->assertSessionHasErrors(['name' => 'Nasa listahan na ang "maria".']);
+        $this->assertSame('Pedro', $pedro->fresh()->name);
+    }
+
+    public function test_renaming_needs_the_organizer_password(): void
+    {
+        $this->seedNames();
+        $pedro = Participant::where('name', 'Pedro')->first();
+
+        $this->patch('/admin/participants/'.$pedro->id, ['name' => 'Hacker'])->assertRedirect('/admin/login');
+        $this->assertSame('Pedro', $pedro->fresh()->name);
+    }
+
     public function test_start_over_keeps_names(): void
     {
         $this->seedNames();

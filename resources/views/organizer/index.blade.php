@@ -37,13 +37,19 @@
         </form>
     </section>
 
+    {{-- Hanapin: sinasala ang mga listahan at ang resulta habang nagta-type --}}
+    <section class="stack">
+        <input type="search" id="orgSearch" placeholder="Hanapin ang pangalan…" aria-label="Hanapin ang pangalan" autocomplete="off">
+        <p class="muted" id="orgSearchInfo" aria-live="polite" hidden></p>
+    </section>
+
     {{-- Listahan bawat grupo --}}
     @foreach ($groups as $group)
-        <section class="stack">
+        <section class="stack org-group">
             <h3>{{ $group['label'] }} ({{ $group['participants']->count() }})</h3>
             <ul class="plist">
                 @forelse ($group['participants'] as $p)
-                    <li>
+                    <li data-name="{{ $p->name }}">
                         <span class="pnum">{{ $p->number }}</span>
                         <span class="pname">{{ $p->name }}</span>
                         <span class="tag">
@@ -53,6 +59,7 @@
                             ])->filter()->implode(' · ') }}
                         </span>
                         <span class="row-actions">
+                            <button class="remove edit-toggle" type="button" aria-label="Baguhin si {{ $p->name }}">Baguhin</button>
                             <form method="POST" action="{{ route('organizer.participants.group', $p) }}">
                                 @csrf @method('PATCH')
                                 <button class="remove" type="submit">Ilipat sa {{ $group['key'] === 'matanda' ? 'Bata' : 'Matanda' }}</button>
@@ -62,10 +69,19 @@
                                 <button class="remove" type="submit" aria-label="Alisin si {{ $p->name }}">Alisin</button>
                             </form>
                         </span>
+                        <form class="edit-form" method="POST" action="{{ route('organizer.participants.update', $p) }}" autocomplete="off" hidden>
+                            @csrf @method('PATCH')
+                            <input type="text" name="name" value="{{ $p->name }}" maxlength="60" aria-label="Bagong spelling ng {{ $p->name }}" required>
+                            <button class="small-btn" type="submit">I-save</button>
+                            <button class="small-btn ghost edit-cancel" type="button">Kanselahin</button>
+                        </form>
                     </li>
                 @empty
                     <li class="empty">Wala pang pangalan dito.</li>
                 @endforelse
+                @if ($group['participants']->isNotEmpty())
+                    <li class="empty no-match" hidden>Walang tugmang pangalan dito.</li>
+                @endif
             </ul>
         </section>
     @endforeach
@@ -83,7 +99,7 @@
                         <thead><tr><th>Nag-ikot</th><th>Grupo</th><th>Nabunot</th></tr></thead>
                         <tbody>
                             @foreach ($draws as $d)
-                                <tr>
+                                <tr data-name="{{ $d->spinner_name }} {{ $d->picked_name }}">
                                     <td>{{ $d->spinner_name }}</td>
                                     <td>{{ \App\Models\Participant::GROUPS[$d->group] ?? $d->group }}</td>
                                     <td class="num">Blg. {{ $d->picked_number }} · {{ $d->picked_name }}</td>
@@ -130,6 +146,35 @@
   }
   input.addEventListener("input", update);
   update();
+
+  // Hanapin: hide names (and results) that don't match what's typed
+  const search = document.getElementById("orgSearch"), info = document.getElementById("orgSearchInfo");
+  search.addEventListener("input", () => {
+    const q = norm(search.value);
+    let shown = 0, total = 0;
+    document.querySelectorAll(".org-group").forEach(section => {
+      let groupShown = 0;
+      section.querySelectorAll("li[data-name]").forEach(li => {
+        const hit = !q || norm(li.dataset.name).includes(q);
+        li.hidden = !hit; total++; if (hit) { shown++; groupShown++; }
+      });
+      const none = section.querySelector(".no-match");
+      if (none) none.hidden = groupShown > 0;
+    });
+    document.querySelectorAll(".results tr[data-name]").forEach(tr => tr.hidden = q !== "" && !norm(tr.dataset.name).includes(q));
+    info.hidden = !q;
+    info.textContent = shown + " sa " + total + " na pangalan ang tugma.";
+  });
+
+  // Baguhin: open the spelling form under the name; Kanselahin closes it
+  document.querySelectorAll(".plist li[data-name]").forEach(li => {
+    const form = li.querySelector(".edit-form"), field = form.querySelector("input[name=name]");
+    li.querySelector(".edit-toggle").addEventListener("click", () => {
+      form.hidden = !form.hidden;
+      if (!form.hidden) { field.focus(); field.select(); }
+    });
+    li.querySelector(".edit-cancel").addEventListener("click", () => { field.value = li.dataset.name; form.hidden = true; });
+  });
 })();
 </script>
 @endpush

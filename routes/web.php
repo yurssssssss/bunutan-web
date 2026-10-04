@@ -19,6 +19,7 @@ Route::post('/admin/login', [OrganizerController::class, 'login'])->middleware('
 Route::middleware(EnsureOrganizer::class)->prefix('admin')->name('organizer.')->group(function () {
     Route::get('/', [OrganizerController::class, 'index'])->name('index');
     Route::post('/participants', [OrganizerController::class, 'store'])->name('participants.store');
+    Route::patch('/participants/{participant}', [OrganizerController::class, 'update'])->name('participants.update');
     Route::patch('/participants/{participant}/group', [OrganizerController::class, 'switchGroup'])->name('participants.group');
     Route::delete('/participants/{participant}', [OrganizerController::class, 'destroy'])->name('participants.destroy');
     Route::post('/reset', [OrganizerController::class, 'reset'])->name('reset');

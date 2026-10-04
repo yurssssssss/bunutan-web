@@ -100,6 +100,29 @@ class OrganizerController extends Controller
         return back()->with('status', $msg);
     }
 
+    /** Fix the spelling of a name. Saved results show the new spelling too. */
+    public function update(Request $request, Participant $participant): RedirectResponse
+    {
+        $request->validate(['name' => ['required', 'string', 'max:60']], [
+            'name.required' => 'Hindi puwedeng walang pangalan.',
+            'name.max' => 'Masyadong mahaba ang pangalan.',
+        ]);
+        $name = $this->roulette->clean($request->input('name'));
+        $old = $participant->name;
+
+        $taken = Participant::whereKeyNot($participant->id)->pluck('name')
+            ->contains(fn ($n) => $this->roulette->normalize($n) === $this->roulette->normalize($name));
+        if ($name === '' || $taken) {
+            return back()->withErrors(['name' => $name === '' ? 'Hindi puwedeng walang pangalan.' : 'Nasa listahan na ang "'.$name.'".']);
+        }
+
+        $participant->update(['name' => $name]);
+        Draw::where('picked_participant_id', $participant->id)->update(['picked_name' => $name]);
+        Draw::where('spinner_participant_id', $participant->id)->update(['spinner_name' => $name]);
+
+        return back()->with('status', 'Napalitan ang "'.$old.'" ng "'.$name.'".');
+    }
+
     /** Move a name to the other group. */
     public function switchGroup(Participant $participant): RedirectResponse
     {
