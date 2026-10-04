@@ -10,7 +10,7 @@
             Bumalik
         </button>
     </div>
-    <h1>Bunutan</h1>
+    <h1>Exchange Gift Bunutan</h1>
 
     {{-- Hakbang 1: Matanda o Bata --}}
     <section class="stack" id="stGroup">
@@ -26,7 +26,7 @@
     <section class="stack" id="stName" hidden>
         <h2 id="askName">Ano ang pangalan mo?</h2>
         <form class="stack" id="nameForm" autocomplete="off">
-            <input id="nameInput" type="text" placeholder="I-type ang pangalan mo" aria-label="Pangalan mo" maxlength="60">
+            <input id="nameInput" type="text" placeholder="I-type ang pangalan mo o palayaw(nickname)" aria-label="Pangalan mo" maxlength="60">
             <div class="btn-row">
                 <button class="secondary" type="button" id="clearBtn" disabled>Burahin</button>
                 <button class="primary" type="submit" id="nameBtn">Susunod</button>
